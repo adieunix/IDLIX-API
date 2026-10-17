@@ -9,7 +9,7 @@ const { BASE_URL } = require('../config/env');
  */
 function mapApiItem(item) {
   if (!item) return null;
-  const isSeries = item.contentType === 'series';
+  const isSeries = item.contentType === 'tv_series';
   const endpoint = `${isSeries ? 'series' : 'movie'}/${item.slug}`;
 
   let year = null;
