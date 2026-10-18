@@ -13,6 +13,7 @@ function mapApiItemV2(item) {
   }
 
   const posterUrl = item.content.posterPath ? `https://image.tmdb.org/t/p/w300${item.content.posterPath}` : null;
+  const backdropUrl = item.content.backdropPath ? `https://image.tmdb.org/t/p/w1280${item.content.backdropPath}` : null;
 
   return {
     title: item.content.title || '',
@@ -23,6 +24,7 @@ function mapApiItemV2(item) {
     rating: item.content.voteAverage ? parseFloat(item.content.voteAverage) : null,
     season: null, // Only visible inside series detail usually
     poster: posterUrl,
+    backdrop: backdropUrl,
     slug: item.content.slug,
     link: {
       endpoint,
