@@ -3,7 +3,7 @@
 const httpClient = require('../lib/httpClient');
 const cache      = require('../lib/cacheService');
 const { CACHE_TTL } = require('../config/env');
-const { mapApiItem } = require('../lib/scraper');
+const { mapApiItem, mapApiItemV2 } = require('../lib/scraper');
 
 /**
  * Fetch and parse featured movies from the IDLIX homepage.
@@ -18,7 +18,7 @@ async function getFeatured() {
   if (!data || !data.above) return [];
   
   const section = data.above.find(s => s.title && s.title.toLowerCase().includes('featured')) || data.above[0];
-  const items = (section?.data || []).map(mapApiItem).filter(Boolean);
+  const items = (section?.data || []).map(mapApiItemV2).filter(Boolean);
   
   cache.set(key, items);
   return items;
@@ -36,7 +36,7 @@ async function getCinemaxxi() {
   const data = await httpClient.getJson('/api/homepage');
   if (!data || !data.above) return [];
 
-  const section = data.above.find(s => s.title && s.title.toLowerCase().includes('recently added movies')) || data.above[1];
+  const section = data.below.find(s => s.title && s.title.toLowerCase().includes('recently added movies')) || data.below[2];
   const items = (section?.data || []).map(mapApiItem).filter(Boolean);
   
   cache.set(key, items);

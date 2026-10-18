@@ -2,6 +2,36 @@
 
 const { BASE_URL } = require('../config/env');
 
+function mapApiItemV2(item) {
+  if (!item) return null;
+  const isSeries = item.contentType === 'tv_series';
+  const endpoint = `${isSeries ? 'series' : 'movie'}/${item.content.slug}`;
+
+  let year = null;
+  if (item.releaseDate) {
+    year = parseInt(String(item.releaseDate).substring(0, 4), 10) || null;
+  }
+
+  const posterUrl = item.content.posterPath ? `https://image.tmdb.org/t/p/w300${item.content.posterPath}` : null;
+
+  return {
+    title: item.content.title || '',
+    originalTitle: item.content.title || '',
+    year,
+    type: isSeries ? 'series' : 'movie',
+    quality: item.content.quality || null,
+    rating: item.content.voteAverage ? parseFloat(item.content.voteAverage) : null,
+    season: null, // Only visible inside series detail usually
+    poster: posterUrl,
+    slug: item.content.slug,
+    link: {
+      endpoint,
+      url: `${BASE_URL}/${endpoint}`,
+      thumbnail: posterUrl
+    }
+  };
+}
+
 /**
  * Maps a native JSON API item from IDLIX into our standardized schema.
  * @param {Object} item - The raw JSON item from /api/movies or /api/homepage
@@ -102,5 +132,6 @@ function mapApiDetail(item) {
 
 module.exports = {
   mapApiItem,
+  mapApiItemV2,
   mapApiDetail,
 };
