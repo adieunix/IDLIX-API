@@ -27,7 +27,7 @@ module.exports = (category, validator) => {
   router.get('/movie/:value/:page', validator, validatePage, categoryController.browseMovie);
   
   router.get('/:value', validator, categoryController.browse);
-  router.get('/:value/:page', validator, validatePage, categoryController.browse);
+  router.get('/:value/:t/:page', validator, validatePage, categoryController.browse);
 
   return router;
 };

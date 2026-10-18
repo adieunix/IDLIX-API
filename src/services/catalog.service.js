@@ -80,15 +80,16 @@ async function getCategoryIndex(category) {
   return items;
 }
 
-async function getCategoryBrowse(category, value, type, page = 1) {
-  const key = buildKey([category, value, type || 'all', `page-${page}`]);
+async function getCategoryBrowse(category, value, type, page = 1, t = 'all') {
+  const limit = (t=='all') ? 36 : 10;
+  const key = buildKey([category, value, type || 'all', `page-${page}`, `t-${t}`]);
   if (cache.isHit(key, CACHE_TTL.page)) return cache.get(key);
 
   const isSeries = type === 'series';
   const apiPath = isSeries ? '/api/series' : '/api/browse';
   
   // The API uses query params matching the category name (e.g., ?country=us)
-  const qs = `${category}=${value}&page=${page}&limit=36&sort=createdAt`;
+  const qs = `${category}=${value}&page=${page}&limit=${limit}&sort=createdAt`;
   
   const data = await httpClient.getJson(`${apiPath}?${qs}`);
   const items = (data?.data || []).map(mapApiItem).filter(Boolean);

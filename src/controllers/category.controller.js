@@ -14,9 +14,9 @@ exports.index = async (req, res, next) => {
 
 exports.browse = async (req, res, next) => {
   try {
-    const { value, page = 1 } = req.params;
+    const { value, page = 1, t = 'all' } = req.params;
     const type = req.query.type === 'movie' || req.query.type === 'series' ? req.query.type : undefined;
-    const data = await catalogService.getCategoryBrowse(req.category, value, type, page);
+    const data = await catalogService.getCategoryBrowse(req.category, value, type, page, t);
     success(res, data, { filters: { [req.category]: value, type: type || 'all', page } });
   } catch (err) {
     next(err);
