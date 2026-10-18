@@ -85,7 +85,7 @@ async function getCategoryBrowse(category, value, type, page = 1) {
   if (cache.isHit(key, CACHE_TTL.page)) return cache.get(key);
 
   const isSeries = type === 'series';
-  const apiPath = isSeries ? '/api/series' : '/api/movies';
+  const apiPath = isSeries ? '/api/series' : '/api/browse';
   
   // The API uses query params matching the category name (e.g., ?country=us)
   const qs = `${category}=${value}&page=${page}&limit=36&sort=createdAt`;
