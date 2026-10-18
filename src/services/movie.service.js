@@ -13,7 +13,7 @@ async function getBrowse() {
   const key = 'movie.browse';
   if (cache.isHit(key, CACHE_TTL.page)) return cache.get(key);
 
-  const data = await httpClient.getJson('/api/movies?page=1&limit=36&sort=createdAt');
+  const data = await httpClient.getJson('/api/browse?page=1&limit=36&sort=createdAt');
   const items = (data?.data || []).map(mapApiItem).filter(Boolean);
 
   cache.set(key, items);
@@ -47,7 +47,7 @@ async function getTrendingPage(page) {
   const key = `trending.page.${page}`;
   if (cache.isHit(key, CACHE_TTL.trending)) return cache.get(key);
 
-  const data = await httpClient.getJson(`/api/movies?page=${page}&limit=36&sort=popularityScore`);
+  const data = await httpClient.getJson(`/api/browse?page=${page}&limit=36&sort=popularityScore`);
   const items = (data?.data || []).map(mapApiItem).filter(Boolean);
 
 
