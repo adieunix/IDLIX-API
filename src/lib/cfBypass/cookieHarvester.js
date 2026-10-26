@@ -10,7 +10,7 @@ const { BASE_URL, STEALTH_API_URL } = require('../../config/env');
  * @param {string} [opts.method='GET']
  * @param {string} [opts.body]           - Request body (string or JSON string)
  * @param {object} [opts.headers={}]     - Extra headers to merge in
- * @returns {Promise<{ status: number, ok: boolean, text: string }>}
+ * @returns {Promise<{ status: number, ok: boolean, text: string, headers: object|null, cookies: object[] }>}
  */
 async function browserFetch(url, { method = 'GET', body, headers = {} } = {}) {
   try {
@@ -34,23 +34,26 @@ async function browserFetch(url, { method = 'GET', body, headers = {} } = {}) {
 
     if (!res.ok) {
       console.warn(`[stealthClient] HTTP error from stealth service: ${res.status}`);
-      return { status: res.status, ok: false, text: '' };
+      return { status: res.status, ok: false, text: '', headers: null, cookies: [] };
     }
 
     const data = await res.json();
     if (data.status !== 'ok' || !data.solution) {
       console.warn(`[stealthClient] Stealth failed to solve:`, data);
-      return { status: 500, ok: false, text: '' };
+      return { status: 500, ok: false, text: '', headers: null, cookies: [] };
     }
 
     return {
       status: data.solution.status,
       ok: data.solution.status >= 200 && data.solution.status < 300,
-      text: data.solution.response || ''
+      text: data.solution.response || '',
+      headers: data.solution.headers || data.solution.responseHeaders ||
+        data.solution.response_headers || null,
+      cookies: Array.isArray(data.solution.cookies) ? data.solution.cookies : [],
     };
   } catch (err) {
     console.error(`[stealthClient] Error calling stealth service:`, err.message);
-    return { status: 0, ok: false, text: err.message };
+    return { status: 0, ok: false, text: err.message, headers: null, cookies: [] };
   }
 }
 

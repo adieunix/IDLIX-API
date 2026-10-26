@@ -223,11 +223,15 @@ See [`.env.example`](.env.example) for all available configuration options.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `IDLIX_BASE_URL` | `https://z2.idlixku.com` | Upstream site URL |
+| `IDLIX_LOGIN_IDENTIFIER` | `adie.anez@gmail.com` | Identifier sent to the upstream login endpoint |
+| `IDLIX_LOGIN_PASSWORD` | *(unset)* | Password for the upstream login; required to run the login step |
 | `PORT` | `3000` | API server port |
 | `STEALTH_API_URL` | `http://localhost:8191` | URL of the Stealth service |
 | `CACHE_TTL_DETAIL` | `2` | Detail page cache (hours) |
 | `CACHE_TTL_STREAM` | `0.25` | Stream URL cache (hours = 15min) |
 | `CACHE_TTL_SEARCH` | `0.5` | Search cache (hours = 30min) |
+
+The access token returned by login is kept in memory for the current stream request and sent with Step 3. Token values are not logged or persisted.
 
 ---
 

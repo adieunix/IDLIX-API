@@ -8,6 +8,10 @@ module.exports = {
   /** Base URL of the upstream IDLIX site (no trailing slash). */
   BASE_URL: process.env.IDLIX_BASE_URL || 'https://z2.idlixku.com',
 
+  /** IDLIX account used by the stream client login step. */
+  IDLIX_LOGIN_IDENTIFIER: process.env.IDLIX_LOGIN_IDENTIFIER || 'adie.anez@gmail.com',
+  IDLIX_LOGIN_PASSWORD: process.env.IDLIX_LOGIN_PASSWORD || '',
+
   /** HTTP port the server listens on. */
   PORT: process.env.PORT || 3000,
 

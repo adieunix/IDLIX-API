@@ -26,7 +26,11 @@
  *   6.  POST majorplay.net/api/play              → stream config + subtitles
  */
 
-const { BASE_URL } = require('../config/env');
+const {
+  BASE_URL,
+  IDLIX_LOGIN_IDENTIFIER,
+  IDLIX_LOGIN_PASSWORD,
+} = require('../config/env');
 const { browserFetch } = require('./cfBypass/cookieHarvester');
 
 const UA = 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36';
@@ -63,6 +67,61 @@ function emptyResult() {
     maxHeight:   null,
     expiresAt:   null,
   };
+}
+
+function getSetCookieHeaders(headers) {
+  if (Array.isArray(headers)) {
+    return headers
+      .filter(header => Array.isArray(header) && /^set-cookie$/i.test(header[0]))
+      .map(([, value]) => value);
+  }
+  if (!headers || typeof headers !== 'object') return [];
+
+  const entry = Object.entries(headers).find(([name]) => /^set-cookie$/i.test(name));
+  if (!entry) return [];
+  return Array.isArray(entry[1]) ? entry[1] : [entry[1]];
+}
+
+function getAccessToken(cookies, headers) {
+  const cookie = (cookies || []).find(item => item?.name === 'access_token' && item.value);
+  if (cookie) return cookie.value;
+
+  for (const setCookie of getSetCookieHeaders(headers)) {
+    const match = String(setCookie).match(/(?:^|;\s*)access_token=([^;]*)/i);
+    if (match?.[1]) return match[1];
+  }
+  return null;
+}
+
+/**
+ * Log in before resolving stream content. Login results are diagnostic for now.
+ */
+async function loginUser() {
+  const url = `${BASE_URL}/api/auth/login`;
+  if (!IDLIX_LOGIN_PASSWORD) {
+    console.warn('[streamClient] Login skipped: IDLIX_LOGIN_PASSWORD is not configured');
+    return;
+  }
+
+  console.log(`[streamClient] Login: POST ${url}`);
+  const res = await browserFetch(url, {
+    method: 'POST',
+    body: JSON.stringify({
+      identifier: IDLIX_LOGIN_IDENTIFIER,
+      password: IDLIX_LOGIN_PASSWORD,
+    }),
+    headers: {
+      'accept': 'application/json',
+      'content-type': 'application/json',
+      'origin': BASE_URL,
+      'referer': `${BASE_URL}/`,
+    },
+  });
+
+  const accessToken = res.ok ? getAccessToken(res.cookies, res.headers) : null;
+  console.log(`[streamClient] Login response: status=${res.status}, ok=${res.ok}`);
+  console.log(`[streamClient] Login access_token received: ${Boolean(accessToken)}`);
+  return accessToken;
 }
 
 // ── Step implementations ──────────────────────────────────────────────────────
@@ -173,13 +232,17 @@ async function trackView(contentType, contentId, referer, episodeId = null) {
  * @param {string} playInfoType - "movie" | "episode"
  * @param {string} uuid
  * @param {string} referer
+ * @param {string|null} accessToken
  * @returns {Promise<object|null>}
  */
-async function getPlayInfo(playInfoType, uuid, referer) {
+async function getPlayInfo(playInfoType, uuid, referer, accessToken) {
   const url = `${BASE_URL}/api/watch/play-info/${playInfoType}/${uuid}`;
   console.log(`[streamClient] Step 3: GET ${url}`);
 
-  const res  = await browserFetch(url, { headers: { referer } });
+  const headers = { referer };
+  if (accessToken) headers.cookie = `access_token=${accessToken}`;
+
+  const res = await browserFetch(url, { headers });
   const data = parseJson(res);
 
   if (!data) {
@@ -274,11 +337,12 @@ async function redeemClaim(redeemUrl, claim) {
  * @param {string} playInfoUuid
  * @param {string} referer
  * @param {string} label
+ * @param {string|null} accessToken
  * @returns {Promise<object>}
  */
-async function runStreamTail(playInfoType, playInfoUuid, referer, label) {
+async function runStreamTail(playInfoType, playInfoUuid, referer, label, accessToken) {
   // Step 3
-  const playInfo = await getPlayInfo(playInfoType, playInfoUuid, referer);
+  const playInfo = await getPlayInfo(playInfoType, playInfoUuid, referer, accessToken);
   if (!playInfo) return emptyResult();
 
   if (playInfo.kind !== 'gate') {
@@ -331,12 +395,13 @@ async function runStreamTail(playInfoType, playInfoUuid, referer, label) {
 async function getStreamData(slug) {
   const referer = `${BASE_URL}/movie/${slug}`;
 
+  const accessToken = await loginUser();
   const uuid = await resolveMovieUuid(slug, referer);
   if (!uuid) return emptyResult();
 
   await trackView('movie', uuid, referer);
 
-  return runStreamTail('movie', uuid, referer, `movie/${slug}`);
+  return runStreamTail('movie', uuid, referer, `movie/${slug}`, accessToken);
 }
 
 /**
@@ -349,6 +414,7 @@ async function getStreamData(slug) {
 async function getEpisodeStreamData(slug, season, episode) {
   const referer = `${BASE_URL}/series/${slug}/season/${season}/episode/${episode}`;
 
+  const accessToken = await loginUser();
   const { seriesUuid, episodeUuid } = await resolveSeriesAndEpisodeUuids(slug, season, episode);
 
   if (!episodeUuid) {
@@ -359,7 +425,7 @@ async function getEpisodeStreamData(slug, season, episode) {
   await trackView('tv_series', seriesUuid || episodeUuid, referer, episodeUuid);
 
   return runStreamTail('episode', episodeUuid, referer,
-    `series/${slug}/s${season}e${episode}`);
+    `series/${slug}/s${season}e${episode}`, accessToken);
 }
 
 module.exports = { getStreamData, getEpisodeStreamData };
