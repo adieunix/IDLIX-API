@@ -118,6 +118,7 @@ async function loginUser() {
     },
   });
 
+  if(res.status !== 200) console.log(res)
   const accessToken = res.ok ? getAccessToken(res.cookies, res.headers) : null;
   console.log(`[streamClient] Login response: status=${res.status}, ok=${res.ok}`);
   console.log(`[streamClient] Login access_token received: ${Boolean(accessToken)}`);
