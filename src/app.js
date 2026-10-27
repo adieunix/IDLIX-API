@@ -44,7 +44,7 @@ function createApp() {
 
   // ── Public assets (CDN-style) ────────────────────────────────────────────
   const publicDir = path.join(__dirname, '..', 'public');
-  app.use('/public', express.static(publicDir, { maxAge: '1d' }));
+  app.use('/public', express.static(publicDir, { maxAge: '30d' }));
 
   // ── Static files ────────────────────────────────────────────────────────
   app.use(express.static(publicDir));
