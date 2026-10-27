@@ -275,6 +275,25 @@ async function getPlayInfo(playInfoType, uuid, referer, accessToken) {
   return data;
 }
 
+/* Step 4b */
+async function accesByPremiumUser(xdata) {
+  const response = await fetch('https://e2e.majorplay.net/api/play', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'origin': BASE_URL,
+      'referer': `${BASE_URL}/`,
+    },
+    body: JSON.stringify({
+      claim: xdata.claim,
+      mode: 'browser',
+    }),
+  });
+
+  const text = await response.text();
+  return JSON.parse(text)
+}
+
 /**
  * Step 5: POST /api/watch/session/claim.
  * @param {string} gateToken
@@ -363,30 +382,35 @@ async function redeemClaim(redeemUrl, claim) {
  * @returns {Promise<object>}
  */
 async function runStreamTail(playInfoType, playInfoUuid, referer, label, accessToken) {
+  let playData;
+
   // Step 3
   const playInfo = await getPlayInfo(playInfoType, playInfoUuid, referer, accessToken);
   if (!playInfo) return emptyResult();
 
   if (playInfo.kind !== 'gate') {
     console.warn(`[streamClient] Unexpected play-info kind: "${playInfo.kind}"`);
-    return emptyResult();
+    // return emptyResult();
+
+    playData = await accesByPremiumUser(playInfo);
+    if (!playData) return emptyResult();
+  } else {
+    // Step 4: wait for countdown
+    const countdownMs = playInfo.unlockAt - playInfo.serverNow;
+    const waitMs = Math.min(Math.max(0, countdownMs + 500), 20000);
+    if (waitMs > 0) {
+      console.log(`[streamClient] Step 4: waiting ${waitMs}ms...`);
+      await new Promise(r => setTimeout(r, waitMs));
+    }
+
+    // Step 5
+    const claimData = await claimSession(playInfo.gateToken, referer);
+    if (!claimData) return emptyResult();
+
+    // Step 6 (Node.js fetch — majorplay.net has no CF protection)
+    playData = await redeemClaim(claimData.redeemUrl, claimData.claim);
+    if (!playData) return emptyResult();
   }
-
-  // Step 4: wait for countdown
-  const countdownMs = playInfo.unlockAt - playInfo.serverNow;
-  const waitMs = Math.min(Math.max(0, countdownMs + 500), 20000);
-  if (waitMs > 0) {
-    console.log(`[streamClient] Step 4: waiting ${waitMs}ms...`);
-    await new Promise(r => setTimeout(r, waitMs));
-  }
-
-  // Step 5
-  const claimData = await claimSession(playInfo.gateToken, referer);
-  if (!claimData) return emptyResult();
-
-  // Step 6 (Node.js fetch — majorplay.net has no CF protection)
-  const playData = await redeemClaim(claimData.redeemUrl, claimData.claim);
-  if (!playData) return emptyResult();
 
   await logoutUser();
 
@@ -401,10 +425,10 @@ async function runStreamTail(playInfoType, playInfoUuid, referer, label, accessT
   return {
     streamUrl:   playData.url || null,
     subtitles,
-    videoId:     playData.videoId     || claimData.videoId     || null,
-    title:       claimData.title      || null,
-    durationSec: claimData.durationSec || null,
-    maxHeight:   playData.maxHeight   || claimData.maxHeight   || null,
+    videoId:     playData.videoId     || null,
+    title:       playInfo.title      || null,
+    durationSec: playInfo.durationSec || null,
+    maxHeight:   playInfo.maxHeight   || null,
     expiresAt:   playData.expiresAt   || null,
   };
 }
