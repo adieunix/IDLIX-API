@@ -383,6 +383,7 @@ async function redeemClaim(redeemUrl, claim) {
  */
 async function runStreamTail(playInfoType, playInfoUuid, referer, label, accessToken) {
   let playData;
+  let premium;
 
   // Step 3
   const playInfo = await getPlayInfo(playInfoType, playInfoUuid, referer, accessToken);
@@ -392,10 +393,12 @@ async function runStreamTail(playInfoType, playInfoUuid, referer, label, accessT
     console.warn(`[streamClient] Unexpected play-info kind: "${playInfo.kind}"`);
     // return emptyResult();
 
+    premium = true;
     playData = await accesByPremiumUser(playInfo);
     if (!playData) return emptyResult();
   } else {
     // Step 4: wait for countdown
+    premium = false;
     const countdownMs = playInfo.unlockAt - playInfo.serverNow;
     const waitMs = Math.min(Math.max(0, countdownMs + 500), 20000);
     if (waitMs > 0) {
@@ -423,7 +426,7 @@ async function runStreamTail(playInfoType, playInfoUuid, referer, label, accessT
   console.log(`[streamClient] ✅ Stream ready — ${label}`);
 
   return {
-    streamUrl:   playData.url || null,
+    streamUrl:   premium ? playData.url.replace(/&pm=browser$/, "") || null : playData.url || null,
     subtitles,
     videoId:     playData.videoId     || null,
     title:       playInfo.title      || null,
