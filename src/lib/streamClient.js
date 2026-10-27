@@ -125,6 +125,26 @@ async function loginUser() {
   return accessToken;
 }
 
+async function logoutUser() {
+  const url = `${BASE_URL}/api/auth/logout`;
+  const res = await browserFetch(url, {
+    method: 'POST',
+    body: JSON.stringify({ scope: 'everywhere' }),
+    headers: {
+      'accept': 'application/json',
+      'content-type': 'application/json',
+      'origin': BASE_URL,
+      'referer': `${BASE_URL}/`,
+    },
+  });
+
+  console.log('[streamClient] Logout response:', {
+    status: res.status,
+    ok: res.ok,
+    body: res.text,
+  });
+}
+
 // ── Step implementations ──────────────────────────────────────────────────────
 
 /**
@@ -329,6 +349,7 @@ async function redeemClaim(redeemUrl, claim) {
   }
 
   console.log(`[streamClient] Step 6 ✅ ${(data.subtitles || []).length} subtitle(s)`);
+
   return data;
 }
 
@@ -366,6 +387,8 @@ async function runStreamTail(playInfoType, playInfoUuid, referer, label, accessT
   // Step 6 (Node.js fetch — majorplay.net has no CF protection)
   const playData = await redeemClaim(claimData.redeemUrl, claimData.claim);
   if (!playData) return emptyResult();
+
+  await logoutUser();
 
   const subtitles = (playData.subtitles || []).map(s => ({
     lang:  s.lang,
