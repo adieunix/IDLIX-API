@@ -28,6 +28,14 @@ docker compose up -d
 
 The API will be available at `http://localhost:3000`.
 
+### Public Assets
+
+Place static files in the repository's `public/` directory. They are publicly
+available at `http://localhost:3000/public/<filename>` and are sent with a
+one-day public cache policy, so they can be used as CDN-style asset URLs. For
+example, `public/images/logo.png` is available at
+`http://localhost:3000/public/images/logo.png`.
+
 ### Manual Installation
 
 If you prefer to run it without Docker:

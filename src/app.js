@@ -42,9 +42,12 @@ function createApp() {
   // ── API routes ──────────────────────────────────────────────────────────
   app.use('/api', routes);
 
+  // ── Public assets (CDN-style) ────────────────────────────────────────────
+  const publicDir = path.join(__dirname, '..', 'public');
+  app.use('/public', express.static(publicDir, { maxAge: '1d' }));
 
   // ── Static files ────────────────────────────────────────────────────────
-  app.use(express.static(path.join(__dirname, '..', 'public')));
+  app.use(express.static(publicDir));
 
   // ── 404 catch-all (must come after all routes) ──────────────────────────
   app.use((req, res) => {
