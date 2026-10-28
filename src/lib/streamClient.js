@@ -34,6 +34,8 @@ const {
 const { browserFetch } = require('./cfBypass/cookieHarvester');
 
 const UA = 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36';
+const MAX_LOGIN_ATTEMPTS = 3;
+const LOGIN_RETRY_DELAY_MS = 1000;
 
 
 
@@ -103,26 +105,34 @@ async function loginUser() {
     return;
   }
 
-  console.log(`[streamClient] Login: POST ${url}`);
-  const res = await browserFetch(url, {
-    method: 'POST',
-    body: JSON.stringify({
-      identifier: IDLIX_LOGIN_IDENTIFIER,
-      password: IDLIX_LOGIN_PASSWORD,
-    }),
-    headers: {
-      'accept': 'application/json',
-      'content-type': 'application/json',
-      'origin': BASE_URL,
-      'referer': `${BASE_URL}/`,
-    },
-  });
+  for (let attempt = 1; attempt <= MAX_LOGIN_ATTEMPTS; attempt += 1) {
+    console.log(`[streamClient] Login attempt ${attempt}/${MAX_LOGIN_ATTEMPTS}: POST ${url}`);
+    const res = await browserFetch(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        identifier: IDLIX_LOGIN_IDENTIFIER,
+        password: IDLIX_LOGIN_PASSWORD,
+      }),
+      headers: {
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'origin': BASE_URL,
+        'referer': `${BASE_URL}/`,
+      },
+    });
 
-  if(res.status !== 200) console.log(res)
-  const accessToken = res.ok ? getAccessToken(res.cookies, res.headers) : null;
-  console.log(`[streamClient] Login response: status=${res.status}, ok=${res.ok}`);
-  console.log(`[streamClient] Login access_token received: ${Boolean(accessToken)}`);
-  return accessToken;
+    const accessToken = res.ok ? getAccessToken(res.cookies, res.headers) : null;
+    console.log(`[streamClient] Login response: status=${res.status}, ok=${res.ok}`);
+    console.log(`[streamClient] Login access_token received: ${Boolean(accessToken)}`);
+    if (accessToken) return accessToken;
+
+    if (attempt < MAX_LOGIN_ATTEMPTS) {
+      await new Promise(resolve => setTimeout(resolve, LOGIN_RETRY_DELAY_MS));
+    }
+  }
+
+  console.warn(`[streamClient] Login failed to receive access_token after ${MAX_LOGIN_ATTEMPTS} attempts`);
+  return null;
 }
 
 async function logoutUser() {
