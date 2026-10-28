@@ -425,8 +425,6 @@ async function runStreamTail(playInfoType, playInfoUuid, referer, label, accessT
     if (!playData) return emptyResult();
   }
 
-  await logoutUser();
-
   const subtitles = (playData.subtitles || []).map(s => ({
     lang:  s.lang,
     label: s.label,
@@ -456,13 +454,17 @@ async function runStreamTail(playInfoType, playInfoUuid, referer, label, accessT
 async function getStreamData(slug) {
   const referer = `${BASE_URL}/movie/${slug}`;
 
-  const accessToken = await loginUser();
-  const uuid = await resolveMovieUuid(slug, referer);
-  if (!uuid) return emptyResult();
+  try {
+    const accessToken = await loginUser();
+    const uuid = await resolveMovieUuid(slug, referer);
+    if (!uuid) return emptyResult();
 
-  await trackView('movie', uuid, referer);
+    await trackView('movie', uuid, referer);
 
-  return runStreamTail('movie', uuid, referer, `movie/${slug}`, accessToken);
+    return await runStreamTail('movie', uuid, referer, `movie/${slug}`, accessToken);
+  } finally {
+    await logoutUser();
+  }
 }
 
 /**
@@ -475,18 +477,22 @@ async function getStreamData(slug) {
 async function getEpisodeStreamData(slug, season, episode) {
   const referer = `${BASE_URL}/series/${slug}/season/${season}/episode/${episode}`;
 
-  const accessToken = await loginUser();
-  const { seriesUuid, episodeUuid } = await resolveSeriesAndEpisodeUuids(slug, season, episode);
+  try {
+    const accessToken = await loginUser();
+    const { seriesUuid, episodeUuid } = await resolveSeriesAndEpisodeUuids(slug, season, episode);
 
-  if (!episodeUuid) {
-    console.error(`[streamClient] Cannot proceed without episode UUID`);
-    return emptyResult();
+    if (!episodeUuid) {
+      console.error(`[streamClient] Cannot proceed without episode UUID`);
+      return emptyResult();
+    }
+
+    await trackView('tv_series', seriesUuid || episodeUuid, referer, episodeUuid);
+
+    return await runStreamTail('episode', episodeUuid, referer,
+      `series/${slug}/s${season}e${episode}`, accessToken);
+  } finally {
+    await logoutUser();
   }
-
-  await trackView('tv_series', seriesUuid || episodeUuid, referer, episodeUuid);
-
-  return runStreamTail('episode', episodeUuid, referer,
-    `series/${slug}/s${season}e${episode}`, accessToken);
 }
 
 module.exports = { getStreamData, getEpisodeStreamData };
